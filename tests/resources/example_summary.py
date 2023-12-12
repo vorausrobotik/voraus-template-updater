@@ -2,7 +2,7 @@
 
 from datetime import datetime
 
-from voraus_template_updater._schemas import Project, PullRequest, Status, Summary
+from voraus_template_updater._schemas import Project, PullRequest, SkippedProject, Status, Summary
 
 summary = Summary(
     projects=[
@@ -59,8 +59,8 @@ summary = Summary(
             pull_request=PullRequest(url="https://pr6.com", date=datetime(2023, 12, 12)),
         ),
     ],
-    projects_without_cruft=[
-        "project-9",
-        "project-10",
+    skipped_projects=[
+        SkippedProject(name="project-9", url="https://project9.com", reason="No .cruft.json"),
+        SkippedProject(name="project-10", url="https://project10.com", reason="Project archived"),
     ],
 )
