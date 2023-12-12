@@ -87,6 +87,9 @@ addopts = """
     --cov-config=pyproject.toml
     --cov-report=
     """
+markers = [
+    "no_get_cruft_config_mock: Mark tests that should not use automatic get_cruft_config_mock fixture."
+]
 
 [tool.coverage.run]
 branch = true

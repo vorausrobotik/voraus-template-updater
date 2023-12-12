@@ -16,8 +16,19 @@ from voraus_template_updater._update_projects import _check_and_update_projects,
 ORGANIZATION = "dummy-organization"
 
 
+@pytest.fixture(autouse=True)
+def _set_up_mocks(
+    get_cruft_config_mock: MagicMock,  # pylint: disable=unused-argument
+    organization_mock: MagicMock,
+    repo_mock: MagicMock,
+) -> Generator[None, None, None]:
+    organization_mock.get_repos.return_value = [repo_mock]
+
+    yield
+
+
 @pytest.fixture(name="repo_mock")
-def _repo_mock_fixture(organization_mock: MagicMock) -> Generator[MagicMock, None, None]:
+def _repo_mock_fixture() -> Generator[MagicMock, None, None]:
     repo_mock = MagicMock()
     repo_mock.name = "repo"
     repo_mock.homepage = "https://some-repo.com"
@@ -28,8 +39,6 @@ def _repo_mock_fixture(organization_mock: MagicMock) -> Generator[MagicMock, Non
     content_file_mock.download_url = "some_url"
 
     repo_mock.get_contents.return_value = content_file_mock
-
-    organization_mock.get_repos.return_value = [repo_mock]
 
     yield repo_mock
 
@@ -45,6 +54,25 @@ def _organization_mock_fixture() -> Generator[MagicMock, None, None]:
         github_instance_mock.get_organization.return_value = organization_mock
 
         yield organization_mock
+
+
+@pytest.fixture(name="get_cruft_config_mock")
+def _get_cruft_config_mock(request: pytest.FixtureRequest) -> Generator[MagicMock, None, None]:
+    config = CruftConfig(
+        template="some-template-url",
+        context={"cookiecutter": {"full_name": "Some Maintainer"}},
+        checkout="dev",
+        commit="abc",
+        directory=None,
+    )
+
+    if "no_get_cruft_config_mock" in request.keywords:
+        yield MagicMock()
+    else:
+        with patch("voraus_template_updater._update_projects._get_cruft_config") as get_cruft_config_mock:
+            get_cruft_config_mock.return_value = config
+
+            yield get_cruft_config_mock
 
 
 @patch("voraus_template_updater._update_projects.Github")
@@ -93,6 +121,7 @@ def test_get_cruft_config_raises_error_if_more_than_one_cruft_json_found(repo_mo
         _get_cruft_config(repo_mock)
 
 
+@pytest.mark.no_get_cruft_config_mock
 def test_repos_are_skipped_if_no_cruft_json(repo_mock: MagicMock, caplog: pytest.LogCaptureFixture) -> None:
     repo_mock.get_contents.side_effect = GithubException(status=1)
 
@@ -112,6 +141,7 @@ def test_repos_are_skipped_if_no_cruft_json(repo_mock: MagicMock, caplog: pytest
     assert summary.skipped_projects[0].reason == "No '.cruft.json' file"
 
 
+@pytest.mark.no_get_cruft_config_mock
 @patch("voraus_template_updater._update_projects.requests")
 def test_repos_are_skipped_if_cruft_json_cannot_be_downloaded(
     requests_mock: MagicMock, repo_mock: MagicMock, caplog: pytest.LogCaptureFixture
@@ -140,21 +170,11 @@ def test_repos_are_skipped_if_cruft_json_cannot_be_downloaded(
 
 
 @pytest.mark.parametrize(["pr_title"], [("chore: Update Python template",), ("chore(template): Update template",)])
-@patch("voraus_template_updater._update_projects._get_cruft_config")
 def test_repos_are_skipped_if_pull_request_exists(
-    get_cruft_json_mock: MagicMock,
     pr_title: str,
     repo_mock: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    get_cruft_json_mock.return_value = CruftConfig(
-        template="some-template-url",
-        context={"cookiecutter": {"full_name": "Some Maintainer"}},
-        checkout="dev",
-        commit="abc",
-        directory=None,
-    )
-
     pr_mock = MagicMock()
     pr_mock.title = pr_title
     pr_mock.created_at = datetime(2023, 12, 12)
