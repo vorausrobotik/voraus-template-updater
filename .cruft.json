@@ -1,0 +1,28 @@
+{
+  "template": "git@github.com:vorausrobotik/voraus-python-template.git",
+  "commit": "acadc440a7cbb353dbf7d651823eb09e2519e2b4",
+  "checkout": null,
+  "context": {
+    "cookiecutter": {
+      "full_name": "Felipe Peter",
+      "email": "felipe.peter@vorausrobotik.com",
+      "github_user": "Mr-Pepe",
+      "project_name": "voraus Template Updater",
+      "repo_name": "voraus-template-updater",
+      "package_name": "voraus-template-updater",
+      "import_name": "voraus_template_updater",
+      "project_short_description": "A CLI to keep cookiecutter-based projects up-to-date.",
+      "url": "https://github.com/vorausrobotik/voraus-template-updater",
+      "_debug": "False",
+      "_extensions": [
+        "extensions.git_extension.GitExtension"
+      ],
+      "_copy_without_render": [
+        "docs/_templates/license_compliance.rst.j2",
+        "jreleaser.yml"
+      ],
+      "_template": "git@github.com:vorausrobotik/voraus-python-template.git"
+    }
+  },
+  "directory": null
+}
