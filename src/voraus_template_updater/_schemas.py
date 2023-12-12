@@ -4,7 +4,8 @@ from datetime import datetime
 from enum import Enum
 from typing import Optional
 
-from pydantic import BaseModel
+from github.PullRequest import PullRequest
+from pydantic import BaseModel, ConfigDict
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -18,13 +19,6 @@ class Status(Enum):
     EXISTING_PR = "Existing PR since {} ({} days)"
 
 
-class PullRequest(BaseModel):
-    """Contains information about a pull request for a template update."""
-
-    url: str
-    date: datetime
-
-
 class SkippedProject(BaseModel):
     """Contains information about a skipped project and why it was skipped."""
 
@@ -35,6 +29,8 @@ class SkippedProject(BaseModel):
 
 class Project(BaseModel):
     """Contains information about a Python project that is maintained via a template."""
+
+    model_config = ConfigDict(arbitrary_types_allowed=True)
 
     name: str
     url: str
@@ -80,14 +76,15 @@ def _print_table_of_projects(projects: list[Project]) -> None:
                 project_status = project.status.value
                 status_color = "green"
             elif project.status == Status.UPDATED_THIS_RUN:
-                assert project.pull_request is not None
                 project_status = project.status.value
                 status_color = "yellow"
                 maintainer_color = "red"
             else:
                 assert project.pull_request is not None
-                creation_date = datetime.strftime(project.pull_request.date, "%Y-%m-%d")
-                open_since = (datetime.now().replace(tzinfo=None) - project.pull_request.date.replace(tzinfo=None)).days
+                creation_date = datetime.strftime(project.pull_request.created_at, "%Y-%m-%d")
+                open_since = (
+                    datetime.now().replace(tzinfo=None) - project.pull_request.created_at.replace(tzinfo=None)
+                ).days
 
                 project_status = project.status.value.format(creation_date, open_since)
                 status_color = "red"
@@ -103,7 +100,7 @@ def _print_table_of_projects(projects: list[Project]) -> None:
             if project.status != Status.UP_TO_DATE:
                 assert project.pull_request is not None
                 details.append("\nPull request:    ", status_color)
-                details.append(project.pull_request.url, status_color)
+                details.append(project.pull_request.html_url, status_color)
 
             details.append("\nDefault branch:  ")
             details.append(project.default_branch)

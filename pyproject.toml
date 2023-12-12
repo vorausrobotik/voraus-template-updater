@@ -120,5 +120,6 @@ match-dir = "(?!venv|\\.|build|log$|dist).*"
 module = [
     # Ignore packages that do not provide type hints here
     # For example, add "dash.*" to ignore all imports from Dash
+    "cruft.*",
     ]
 ignore_missing_imports = true

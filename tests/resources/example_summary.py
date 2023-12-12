@@ -1,8 +1,19 @@
 """Contains an example summary for testing printed output."""
 
 from datetime import datetime
+from unittest.mock import MagicMock
 
-from voraus_template_updater._schemas import Project, PullRequest, SkippedProject, Status, Summary
+from github.PullRequest import PullRequest
+
+from voraus_template_updater._schemas import Project, SkippedProject, Status, Summary
+
+
+def _get_mocked_pull_request(url: str, date: datetime) -> MagicMock:
+    pull_request_mock = MagicMock(spec=PullRequest)
+    pull_request_mock.html_url = url
+    pull_request_mock.created_at = date
+    return pull_request_mock
+
 
 summary = Summary(
     projects=[
@@ -35,7 +46,7 @@ summary = Summary(
             template_branch="main",
             old_template_commit="abc123",
             status=Status.UPDATED_THIS_RUN,
-            pull_request=PullRequest(url="https://pr3.com", date=datetime(2023, 12, 15)),
+            pull_request=_get_mocked_pull_request(url="https://pr3.com", date=datetime(2023, 12, 15)),
         ),
         Project(
             name="project-4",
@@ -46,7 +57,7 @@ summary = Summary(
             template_branch="development",
             old_template_commit="abc123",
             status=Status.UPDATED_THIS_RUN,
-            pull_request=PullRequest(url="https://pr4.com", date=datetime(2023, 12, 15)),
+            pull_request=_get_mocked_pull_request(url="https://pr4.com", date=datetime(2023, 12, 15)),
         ),
         Project(
             name="project-5",
@@ -57,7 +68,7 @@ summary = Summary(
             template_branch="main",
             old_template_commit="abc123",
             status=Status.EXISTING_PR,
-            pull_request=PullRequest(url="https://pr5.com", date=datetime(2023, 12, 12)),
+            pull_request=_get_mocked_pull_request(url="https://pr5.com", date=datetime(2023, 12, 12)),
         ),
         Project(
             name="project-6",
@@ -68,7 +79,7 @@ summary = Summary(
             template_branch="development",
             old_template_commit="abc123",
             status=Status.EXISTING_PR,
-            pull_request=PullRequest(url="https://pr6.com", date=datetime(2023, 12, 12)),
+            pull_request=_get_mocked_pull_request(url="https://pr6.com", date=datetime(2023, 12, 12)),
         ),
         Project(
             name="project-7",
