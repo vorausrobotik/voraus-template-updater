@@ -1,6 +1,5 @@
 """Checks and updates GitHub repositories that are based on a cookiecutter template and managed with cruft."""
 
-import json
 import logging
 import os
 import re
@@ -20,7 +19,7 @@ from github.Repository import Repository
 from requests import HTTPError
 from typer import Argument, Option, Typer
 
-from voraus_template_updater._schemas import Project, SkippedProject, Status, Summary
+from voraus_template_updater._schemas import CruftConfig, Project, SkippedProject, Status, Summary
 
 PR_TITLE_LEGACY = ("chore: Update Python template",)  # Previously used pull request titles
 PR_TITLE = "chore(template): Update template"
@@ -79,16 +78,16 @@ def _check_and_update_projects(
             )
             continue
 
-        template_url = cruft_config["template"]
+        template_url = cruft_config.template
 
         project = Project(
             name=repo.name,
             url=repo.homepage,
-            maintainer=cruft_config["context"]["cookiecutter"]["full_name"],
+            maintainer=cruft_config.context["cookiecutter"]["full_name"],
             default_branch=repo.default_branch,
             template_url=template_url,
-            template_branch=cruft_config["checkout"] or "main",
-            old_template_commit=cruft_config["commit"],
+            template_branch=cruft_config.checkout or "main",
+            old_template_commit=cruft_config.commit,
             status=Status.UP_TO_DATE,
         )
 
@@ -118,7 +117,7 @@ def _check_and_update_projects(
     return summary
 
 
-def _get_cruft_config(repo: Repository) -> dict:
+def _get_cruft_config(repo: Repository) -> CruftConfig:
     cruft_json = repo.get_contents(".cruft.json")
     if isinstance(cruft_json, list):
         raise RuntimeError(
@@ -129,7 +128,7 @@ def _get_cruft_config(repo: Repository) -> dict:
     response = requests.get(cruft_json.download_url, timeout=10)
     response.raise_for_status()
 
-    return json.loads(response.content.decode("utf-8"))
+    return CruftConfig.model_validate_strings(response.content)
 
 
 def _clone_repo(repo_url: str, github_access_token: str, target_path: Path) -> Repo:

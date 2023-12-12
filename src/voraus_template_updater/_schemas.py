@@ -11,6 +11,16 @@ from rich.table import Table
 from rich.text import Text
 
 
+class CruftConfig(BaseModel):
+    """A cruft config as can be found in a '.cruft.json' file."""
+
+    template: str
+    commit: str
+    checkout: Optional[str]
+    context: dict
+    directory: Optional[str]
+
+
 class Status(Enum):
     """The update status a project can be in."""
 

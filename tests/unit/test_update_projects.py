@@ -10,7 +10,7 @@ from github import GithubException
 from github.ContentFile import ContentFile
 from requests.exceptions import HTTPError
 
-from voraus_template_updater._schemas import Status
+from voraus_template_updater._schemas import CruftConfig, Status
 from voraus_template_updater._update_projects import _check_and_update_projects, _get_cruft_config
 
 ORGANIZATION = "dummy-organization"
@@ -147,12 +147,13 @@ def test_repos_are_skipped_if_pull_request_exists(
     repo_mock: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
-    get_cruft_json_mock.return_value = {
-        "template": "some-template-url",
-        "context": {"cookiecutter": {"full_name": "Some Maintainer"}},
-        "checkout": "dev",
-        "commit": "abc",
-    }
+    get_cruft_json_mock.return_value = CruftConfig(
+        template="some-template-url",
+        context={"cookiecutter": {"full_name": "Some Maintainer"}},
+        checkout="dev",
+        commit="abc",
+        directory=None,
+    )
 
     pr_mock = MagicMock()
     pr_mock.title = pr_title
