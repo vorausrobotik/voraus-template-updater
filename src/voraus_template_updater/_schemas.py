@@ -64,7 +64,8 @@ class Summary(BaseModel):
 
 
 def _print_table_of_projects(projects: list[Project]) -> None:
-    table = Table(title="Processed Projects")
+    title = _get_table_title(projects)
+    table = Table(title=title)
     table.add_column("Maintainer")
     table.add_column("Projects")
 
@@ -120,6 +121,17 @@ def _print_table_of_projects(projects: list[Project]) -> None:
     Console().print(table)
 
 
+def _get_table_title(projects: list[Project]) -> str:
+    processed_projects = len(projects)
+    up_to_date_projects = len(list(filter(lambda p: p.status == Status.UP_TO_DATE, projects)))
+
+    return (
+        f"Projects: {processed_projects}   "
+        f"Outdated: {processed_projects - up_to_date_projects}   "
+        f"Up to date: {up_to_date_projects}"
+    )
+
+
 def _get_projects_by_maintainer(projects: list[Project]) -> dict[str, list[Project]]:
     projects_by_maintainer: dict[str, list[Project]] = {}
 
@@ -132,7 +144,7 @@ def _get_projects_by_maintainer(projects: list[Project]) -> dict[str, list[Proje
 
 
 def _print_table_of_skipped_projects(projects: list[SkippedProject]) -> None:
-    table = Table(title="Skipped Projects")
+    table = Table(title=f"Skipped projects: {len(projects)}")
     table.add_column("Project")
     table.add_column("URL")
     table.add_column("Reason")
