@@ -126,8 +126,8 @@ def _get_table_title(projects: list[Project]) -> str:
     )
 
 
-def _get_projects_by_maintainer(projects: list[Project]) -> dict[str, list[Project]]:
-    projects_by_maintainer: dict[str, list[Project]] = {}
+def _get_projects_by_maintainer(projects: list[Project]) -> dict[Optional[str], list[Project]]:
+    projects_by_maintainer: dict[Optional[str], list[Project]] = {}
 
     for project in sorted(
         projects, key=lambda x: x.maintainer or "z" * 100  # Projects without maintainers sorted to end

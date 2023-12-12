@@ -57,7 +57,9 @@ def _check_and_update_projects(
     for repo in Github(github_access_token).get_organization(github_organization).get_repos():
         if repo.archived:
             _logger.info(f"Skipped '{repo.name}'. Project archived.")
-            summary.skipped_projects.append(SkippedProject(name=repo.name, url=repo.url, reason="Project archived"))
+            summary.skipped_projects.append(
+                SkippedProject(name=repo.name, url=repo.homepage, reason="Project archived")
+            )
             continue
 
         try:
@@ -65,7 +67,7 @@ def _check_and_update_projects(
         except GithubException:
             _logger.info(f"Skipped '{repo.name}'. Project does not have a '.cruft.json' file.")
             summary.skipped_projects.append(
-                SkippedProject(name=repo.name, url=repo.url, reason="No '.cruft.json' file")
+                SkippedProject(name=repo.name, url=repo.homepage, reason="No '.cruft.json' file")
             )
             continue
         except HTTPError:
@@ -73,7 +75,7 @@ def _check_and_update_projects(
                 f"Skipped '{repo.name}'. Failed to retrieve '.cruft.json' file although the project has one."
             )
             summary.skipped_projects.append(
-                SkippedProject(name=repo.name, url=repo.url, reason="Cannot download '.cruft.json' file")
+                SkippedProject(name=repo.name, url=repo.homepage, reason="Cannot download '.cruft.json' file")
             )
             continue
 
@@ -91,7 +93,7 @@ def _check_and_update_projects(
         )
 
         if (pull_request := _get_existing_pull_request(repo)) is not None:
-            _logger.info(f"Project '{repo.name}' already has an active pull request for a template update.")
+            _logger.info(f"Skipped '{repo.name}'. Project already has an active pull request for a template update.")
             summary.projects.append(
                 project.model_copy(update={"status": Status.EXISTING_PR, "pull_request": pull_request})
             )
