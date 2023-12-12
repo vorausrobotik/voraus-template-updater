@@ -1,14 +1,70 @@
-Project    Maintainer    Default Branch    Template Branch    Status
----------  ------------  ----------------  -----------------  ------------------------------------------------------
-project-1  maintainer-1  master            main               Up to date
-project-3  maintainer-1  master            main               Updated this run -> https://pr3.com
-project-5  maintainer-1  main              main               Existing PR for 3 days (2023-12-12) -> https://pr5.com
-project-2  maintainer-2  main              development        Up to date
-project-4  maintainer-2  main              development        Updated this run -> https://pr4.com
-project-6  maintainer-2  main              development        Existing PR for 3 days (2023-12-12) -> https://pr6.com
+                           Processed Projects                            
+┏━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┓
+┃ Maintainer   ┃ Projects                                               ┃
+┡━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━┩
+│ maintainer-1 │ Project:         project-1                             │
+│              │ URL:             https://project1.com                  │
+│              │ Status:          Up to date                            │
+│              │ Default branch:  master                                │
+│              │ Template URL:    https://first-template.com            │
+│              │ Template branch: main                                  │
+│              │                                                        │
+│              │ Project:         project-3                             │
+│              │ URL:             https://project3.com                  │
+│              │ Status:          Updated this run                      │
+│              │ Pull request:    https://pr3.com                       │
+│              │ Default branch:  master                                │
+│              │ Template URL:    https://first-template.com            │
+│              │ Template branch: main                                  │
+│              │                                                        │
+│              │ Project:         project-5                             │
+│              │ URL:             https://project5.com                  │
+│              │ Status:          Existing PR since 2023-12-12 (3 days) │
+│              │ Pull request:    https://pr5.com                       │
+│              │ Default branch:  main                                  │
+│              │ Template URL:    https://first-template.com            │
+│              │ Template branch: main                                  │
+│              │                                                        │
+│              │                                                        │
+│ maintainer-2 │ Project:         project-2                             │
+│              │ URL:             https://project2.com                  │
+│              │ Status:          Up to date                            │
+│              │ Default branch:  main                                  │
+│              │ Template URL:    https://second-template.com           │
+│              │ Template branch: development                           │
+│              │                                                        │
+│              │ Project:         project-4                             │
+│              │ URL:             https://project4.com                  │
+│              │ Status:          Updated this run                      │
+│              │ Pull request:    https://pr4.com                       │
+│              │ Default branch:  main                                  │
+│              │ Template URL:    https://second-template.com           │
+│              │ Template branch: development                           │
+│              │                                                        │
+│              │ Project:         project-6                             │
+│              │ URL:             https://project6.com                  │
+│              │ Status:          Existing PR since 2023-12-12 (3 days) │
+│              │ Pull request:    https://pr6.com                       │
+│              │ Default branch:  main                                  │
+│              │ Template URL:    https://second-template.com           │
+│              │ Template branch: development                           │
+│              │                                                        │
+│              │                                                        │
+│ maintainer-3 │ Project:         project-7                             │
+│              │ URL:             https://project7.com                  │
+│              │ Status:          Up to date                            │
+│              │ Default branch:  main                                  │
+│              │ Template URL:    https://second-template.com           │
+│              │ Template branch: development                           │
+│              │                                                        │
+│              │                                                        │
+└──────────────┴────────────────────────────────────────────────────────┘
 
 
-Skipped Project    Reason            URL
------------------  ----------------  ---------------------
-project-9          No .cruft.json    https://project9.com
-project-10         Project archived  https://project10.com
+                    Skipped Projects                     
+┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
+┃ Project    ┃ URL                   ┃ Reason           ┃
+┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
+│ project-9  │ https://project9.com  │ No .cruft.json   │
+│ project-10 │ https://project10.com │ Project archived │
+└────────────┴───────────────────────┴──────────────────┘
