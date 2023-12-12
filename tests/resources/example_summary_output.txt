@@ -9,14 +9,6 @@
 │              │ Template URL:    https://first-template.com            │
 │              │ Template branch: main                                  │
 │              │                                                        │
-│              │ Project:         project-3                             │
-│              │ URL:             https://project3.com                  │
-│              │ Status:          Updated this run                      │
-│              │ Pull request:    https://pr3.com                       │
-│              │ Default branch:  master                                │
-│              │ Template URL:    https://first-template.com            │
-│              │ Template branch: main                                  │
-│              │                                                        │
 │              │ Project:         project-5                             │
 │              │ URL:             https://project5.com                  │
 │              │ Status:          Existing PR since 2023-12-12 (3 days) │
@@ -56,6 +48,15 @@
 │              │ Default branch:  main                                  │
 │              │ Template URL:    https://second-template.com           │
 │              │ Template branch: development                           │
+│              │                                                        │
+│              │                                                        │
+│ None         │ Project:         project-3                             │
+│              │ URL:             https://project3.com                  │
+│              │ Status:          Updated this run                      │
+│              │ Pull request:    https://pr3.com                       │
+│              │ Default branch:  master                                │
+│              │ Template URL:    https://first-template.com            │
+│              │ Template branch: main                                  │
 │              │                                                        │
 │              │                                                        │
 └──────────────┴────────────────────────────────────────────────────────┘

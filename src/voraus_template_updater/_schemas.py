@@ -34,7 +34,7 @@ class Project(BaseModel):
 
     name: str
     url: str
-    maintainer: str
+    maintainer: Optional[str] = None
     default_branch: str
     template_url: str
     template_branch: str
@@ -110,7 +110,7 @@ def _print_table_of_projects(projects: list[Project]) -> None:
             details.append(project.template_branch)
             details.append("\n\n")
 
-        table.add_row(Text(maintainer, maintainer_color), details)
+        table.add_row(Text(maintainer or "None", maintainer_color), details)
 
     Console().print(table)
 
@@ -129,7 +129,9 @@ def _get_table_title(projects: list[Project]) -> str:
 def _get_projects_by_maintainer(projects: list[Project]) -> dict[str, list[Project]]:
     projects_by_maintainer: dict[str, list[Project]] = {}
 
-    for project in sorted(projects, key=lambda x: x.maintainer):
+    for project in sorted(
+        projects, key=lambda x: x.maintainer or "z" * 100  # Projects without maintainers sorted to end
+    ):
         if project.maintainer not in projects_by_maintainer:
             projects_by_maintainer[project.maintainer] = [project]
         else:

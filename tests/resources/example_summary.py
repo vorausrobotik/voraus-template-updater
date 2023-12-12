@@ -37,10 +37,9 @@ summary = Summary(
             old_template_commit="abc123",
             status=Status.UP_TO_DATE,
         ),
-        Project(
+        Project(  # No maintainer
             name="project-3",
             url="https://project3.com",
-            maintainer="maintainer-1",
             default_branch="master",
             template_url="https://first-template.com",
             template_branch="main",
