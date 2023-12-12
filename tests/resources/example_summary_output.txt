@@ -1,23 +1,11 @@
-
-Already up-to-date projects:
-Maintainer    Project    Default Branch    Template Branch
-------------  ---------  ----------------  -----------------
-maintainer-1  project-1  master            main
-maintainer-2  project-2  main              development
-
-
-Updated projects during this run:
-Maintainer    Project    Default Branch    Template Branch
-------------  ---------  ----------------  -----------------
-maintainer-1  project-3  master            main
-maintainer-2  project-4  main              development
-
-
-Projects with existing template update PRs:
-Maintainer    Project    Default Branch    Template Branch    Existing Pull Request
-------------  ---------  ----------------  -----------------  ------------------------------------------
-maintainer-1  project-5  main              main               Since 23-12-12 (3 days) -> https://pr5.com
-maintainer-2  project-6  main              development        Since 23-12-12 (3 days) -> https://pr6.com
+Project    Maintainer    Default Branch    Template Branch    Status
+---------  ------------  ----------------  -----------------  ------------------------------------------------------
+project-1  maintainer-1  master            main               Up to date
+project-3  maintainer-1  master            main               Updated this run -> https://pr3.com
+project-5  maintainer-1  main              main               Existing PR for 3 days (2023-12-12) -> https://pr5.com
+project-2  maintainer-2  main              development        Up to date
+project-4  maintainer-2  main              development        Updated this run -> https://pr4.com
+project-6  maintainer-2  main              development        Existing PR for 3 days (2023-12-12) -> https://pr6.com
 
 
 Projects with wrong template URL:

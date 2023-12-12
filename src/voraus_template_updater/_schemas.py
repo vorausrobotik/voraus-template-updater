@@ -1,36 +1,42 @@
 """Contains Pydantic models for the project updater."""
 
 from datetime import datetime
+from enum import Enum
 from typing import Optional
 
 from pydantic import BaseModel
 from tabulate import tabulate
 
 
-class ExistingPullRequest(BaseModel):
-    """Contains information about an existing pull request for a template update."""
+class Status(Enum):
+    UP_TO_DATE = "Up to date"
+    UPDATED_THIS_RUN = "Updated this run -> {}"
+    EXISTING_PR = "Existing PR for {} days ({}) -> {}"
+
+
+class PullRequest(BaseModel):
+    """Contains information about a pull request for a template update."""
 
     url: str
     date: datetime
 
 
 class Project(BaseModel):
-    """Contains information about a Python project that is maintained via the template."""
+    """Contains information about a Python project that is maintained via a template."""
 
     name: str
     maintainer: str
     default_branch: str
     template_branch: str
-    current_template_commit: str
-    existing_pr: Optional[ExistingPullRequest] = None
+    old_template_commit: str
+    status: Status
+    pull_request: Optional[PullRequest] = None
 
 
 class Summary(BaseModel):
     """A summary of the checked and updates projects."""
 
-    up_to_date_projects: list[Project] = []
-    updated_projects: list[Project] = []
-    projects_with_existing_pr: list[Project] = []
+    projects: list[Project] = []
     projects_with_wrong_template_url: list[tuple[str, str]] = []
     projects_without_cruft: list[str] = []
 
@@ -38,17 +44,8 @@ class Summary(BaseModel):
         """Returns a string representation of this summary."""
         output = ""
 
-        if len(self.up_to_date_projects) > 0:
-            output += "\nAlready up-to-date projects:\n"
-            output += _table_of_projects(self.up_to_date_projects)
-
-        if len(self.updated_projects) > 0:
-            output += "\nUpdated projects during this run:\n"
-            output += _table_of_projects(self.updated_projects)
-
-        if len(self.projects_with_existing_pr) > 0:
-            output += "\nProjects with existing template update PRs:\n"
-            output += _table_of_projects(self.projects_with_existing_pr, with_existing_pr=True)
+        if len(self.projects) > 0:
+            output += _table_of_projects(self.projects)
 
         if len(self.projects_with_wrong_template_url) > 0:
             output += "\nProjects with wrong template URL:\n"
@@ -64,25 +61,28 @@ class Summary(BaseModel):
 
 
 def _table_of_projects(projects: list[Project], with_existing_pr: bool = False) -> str:
-    headers: tuple[str, ...] = ("Maintainer", "Project", "Default Branch", "Template Branch")
-    if with_existing_pr:
-        headers = headers + ("Existing Pull Request",)
-
+    headers: tuple[str, ...] = ("Project", "Maintainer", "Default Branch", "Template Branch", "Status")
     data: list[tuple] = []
+
     for project in sorted(projects, key=lambda x: x.maintainer):
         project_data: tuple[str, ...] = (
-            project.maintainer,
             project.name,
+            project.maintainer,
             project.default_branch,
             project.template_branch,
         )
 
-        if with_existing_pr and project.existing_pr is not None:
-            pull_request = project.existing_pr
-            creation_date = datetime.strftime(pull_request.date, "%y-%m-%d")
-            open_since = (datetime.now().replace(tzinfo=None) - pull_request.date.replace(tzinfo=None)).days
+        if project.status == Status.UP_TO_DATE:
+            project_data = project_data + (project.status.value,)
+        elif project.status == Status.UPDATED_THIS_RUN:
+            project_data = project_data + (project.status.value.format(project.pull_request.url),)
+        else:
+            creation_date = datetime.strftime(project.pull_request.date, "%Y-%m-%d")
+            open_since = (datetime.now().replace(tzinfo=None) - project.pull_request.date.replace(tzinfo=None)).days
 
-            project_data = project_data + (f"Since {creation_date} ({open_since} days) -> {pull_request.url}",)
+            project_data = project_data + (
+                project.status.value.format(open_since, creation_date, project.pull_request.url),
+            )
 
         data.append(project_data)
 
