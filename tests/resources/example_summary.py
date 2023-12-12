@@ -84,6 +84,7 @@ summary = Summary(
     skipped_projects=[
         SkippedProject(name="project-9", url="https://project9.com", reason="No .cruft.json"),
         SkippedProject(name="project-10", url="https://project10.com", reason="Project archived"),
+        SkippedProject(name="project-11", url="https://project11.com", reason="No .cruft.json"),
     ],
 )
 

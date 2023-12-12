@@ -61,10 +61,11 @@
 └──────────────┴────────────────────────────────────────────────────────┘
 
 
-                   Skipped projects: 2                   
+                   Skipped projects: 3                   
 ┏━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━━━━━━┳━━━━━━━━━━━━━━━━━━┓
-┃ Project    ┃ URL                   ┃ Reason           ┃
+┃ Project    ┃ URL                   ┃ Skip reason      ┃
 ┡━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━━━━━━╇━━━━━━━━━━━━━━━━━━┩
 │ project-9  │ https://project9.com  │ No .cruft.json   │
+│ project-11 │ https://project11.com │ No .cruft.json   │
 │ project-10 │ https://project10.com │ Project archived │
 └────────────┴───────────────────────┴──────────────────┘

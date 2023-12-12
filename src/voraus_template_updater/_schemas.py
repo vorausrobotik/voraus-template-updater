@@ -73,6 +73,7 @@ def _print_table_of_projects(projects: list[Project]) -> None:
 
     for maintainer, maintainers_projects in projects_by_maintainer.items():
         details = Text()
+        maintainer_color = "green"
 
         for project in maintainers_projects:
             if project.status == Status.UP_TO_DATE:
@@ -82,6 +83,7 @@ def _print_table_of_projects(projects: list[Project]) -> None:
                 assert project.pull_request is not None
                 project_status = project.status.value
                 status_color = "yellow"
+                maintainer_color = "red"
             else:
                 assert project.pull_request is not None
                 creation_date = datetime.strftime(project.pull_request.date, "%Y-%m-%d")
@@ -89,6 +91,7 @@ def _print_table_of_projects(projects: list[Project]) -> None:
 
                 project_status = project.status.value.format(creation_date, open_since)
                 status_color = "red"
+                maintainer_color = "red"
 
             details.append("Project:         ")
             details.append(project.name)
@@ -109,12 +112,6 @@ def _print_table_of_projects(projects: list[Project]) -> None:
             details.append("\nTemplate branch: ")
             details.append(project.template_branch)
             details.append("\n\n")
-
-        maintainer_color = (
-            "red"
-            if any(map(lambda p: p.status in (Status.UPDATED_THIS_RUN, Status.EXISTING_PR), projects))
-            else "green"
-        )
 
         table.add_row(Text(maintainer, maintainer_color), details)
 
@@ -147,9 +144,9 @@ def _print_table_of_skipped_projects(projects: list[SkippedProject]) -> None:
     table = Table(title=f"Skipped projects: {len(projects)}")
     table.add_column("Project")
     table.add_column("URL")
-    table.add_column("Reason")
+    table.add_column("Skip reason")
 
-    for project in projects:
+    for project in sorted(projects, key=lambda p: p.reason):
         table.add_row(project.name, project.url, project.reason)
 
     Console().print(table)
