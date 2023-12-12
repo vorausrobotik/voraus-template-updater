@@ -14,7 +14,6 @@ import git
 import requests
 from git.repo import Repo
 from github import Github
-from github.ContentFile import ContentFile
 from github.GithubException import GithubException
 from github.PullRequest import PullRequest as GitHubPullRequest
 from github.Repository import Repository
@@ -50,22 +49,32 @@ def _check_and_update_projects(
             )
         ),
     ] = "",
-) -> None:
+) -> Summary:
     summary = Summary()
 
     github_access_token = github_access_token or os.environ["GITHUB_TOKEN"]
 
     for repo in Github(github_access_token).get_organization(github_organization).get_repos():
         if repo.archived:
-            _logger.info(f"Skipped '{repo.name}'. Repo archived.")
+            _logger.info(f"Skipped '{repo.name}'. Project archived.")
             summary.skipped_projects.append(SkippedProject(name=repo.name, url=repo.url, reason="Project archived"))
             continue
 
         try:
             cruft_config = _get_cruft_config(repo)
-        except (GithubException, HTTPError):
-            _logger.info(f"Skipped '{repo.name}'. Failed to retrieve .cruft.json file.")
-            summary.skipped_projects.append(SkippedProject(name=repo.name, url=repo.url, reason="Missing .cruft.json"))
+        except GithubException:
+            _logger.info(f"Skipped '{repo.name}'. Project does not have a '.cruft.json' file.")
+            summary.skipped_projects.append(
+                SkippedProject(name=repo.name, url=repo.url, reason="No '.cruft.json' file")
+            )
+            continue
+        except HTTPError:
+            _logger.warning(
+                f"Skipped '{repo.name}'. Failed to retrieve '.cruft.json' file although the project has one."
+            )
+            summary.skipped_projects.append(
+                SkippedProject(name=repo.name, url=repo.url, reason="Cannot download '.cruft.json' file")
+            )
             continue
 
         template_url = cruft_config["template"]
@@ -104,10 +113,16 @@ def _check_and_update_projects(
 
     summary.print()
 
+    return summary
+
 
 def _get_cruft_config(repo: Repository) -> dict:
     cruft_json = repo.get_contents(".cruft.json")
-    assert isinstance(cruft_json, ContentFile), f"Found multiple .cruft.json files in project '{repo.name}'"
+    if isinstance(cruft_json, list):
+        raise RuntimeError(
+            f"Repository '{repo.name}' contains more than one '.cruft.json' file. "
+            "This use case is currently not supported."
+        )
 
     response = requests.get(cruft_json.download_url, timeout=10)
     response.raise_for_status()
