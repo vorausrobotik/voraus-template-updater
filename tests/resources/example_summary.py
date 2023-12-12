@@ -59,10 +59,6 @@ summary = Summary(
             pull_request=PullRequest(url="https://pr6.com", date=datetime(2023, 12, 12)),
         ),
     ],
-    projects_with_wrong_template_url=[
-        ("project-7", "https://wrong-template-url.com"),
-        ("project-8", "https://wrong-template-url.com"),
-    ],
     projects_without_cruft=[
         "project-9",
         "project-10",

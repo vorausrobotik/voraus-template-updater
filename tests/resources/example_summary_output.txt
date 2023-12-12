@@ -8,10 +8,6 @@ project-4  maintainer-2  main              development        Updated this run -
 project-6  maintainer-2  main              development        Existing PR for 3 days (2023-12-12) -> https://pr6.com
 
 
-Projects with wrong template URL:
-Project: project-7 -> Template URL: https://wrong-template-url.com
-Project: project-8 -> Template URL: https://wrong-template-url.com
-
 Projects without .cruft.json:
 project-10
 project-9

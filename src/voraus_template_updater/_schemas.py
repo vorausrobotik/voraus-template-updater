@@ -37,7 +37,6 @@ class Summary(BaseModel):
     """A summary of the checked and updates projects."""
 
     projects: list[Project] = []
-    projects_with_wrong_template_url: list[tuple[str, str]] = []
     projects_without_cruft: list[str] = []
 
     def __str__(self) -> str:
@@ -46,11 +45,6 @@ class Summary(BaseModel):
 
         if len(self.projects) > 0:
             output += _table_of_projects(self.projects)
-
-        if len(self.projects_with_wrong_template_url) > 0:
-            output += "\nProjects with wrong template URL:\n"
-            for project_name, url in sorted(self.projects_with_wrong_template_url, key=lambda x: x[0]):
-                output += f"Project: {project_name} -> Template URL: {url}\n"
 
         if len(self.projects_without_cruft) > 0:
             output += "\nProjects without .cruft.json:\n"
