@@ -225,17 +225,20 @@ def test_successful_cruft_config_retrieval(requests_get_mock: MagicMock, repo_mo
 
 
 @pytest.mark.parametrize(["pr_title"], [("chore: Update Python template",), ("chore(template): Update template",)])
-def test_repos_are_skipped_if_pull_request_exists(
+def test_repos_are_skipped_if_pull_request_exists_that_matches_a_known_name(
     pr_title: str,
     repo_mock: MagicMock,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
+    pr_with_irrelevant_name_mock = MagicMock()
+    pr_with_irrelevant_name_mock.title = "Something irrelevant"
+
     pr_mock = MagicMock()
     pr_mock.title = pr_title
     pr_mock.created_at = datetime(2023, 12, 12)
     pr_mock.html_url = "https://some-pr.com"
 
-    repo_mock.get_pulls.return_value = [pr_mock]
+    repo_mock.get_pulls.return_value = [pr_with_irrelevant_name_mock, pr_mock]
 
     with caplog.at_level(logging.INFO):
         summary = _check_and_update_projects(ORGANIZATION)
