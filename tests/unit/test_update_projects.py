@@ -258,6 +258,41 @@ def test_repos_are_skipped_if_pull_request_exists_that_matches_a_known_name(
     assert summary.projects[0].pull_request == pr_mock
 
 
+def test_maintainer_is_optional(cruft_config: CruftConfig, repo_mock: MagicMock) -> None:
+    # Add existing PR to return early and not perform the whole update shenanigans
+    pr_mock = MagicMock()
+    pr_mock.title = "chore(template): Update template"
+    pr_mock.created_at = datetime(2023, 12, 12)
+    pr_mock.html_url = "https://some-pr.com"
+    repo_mock.get_pulls.return_value = [pr_mock]
+
+    cruft_config.context["cookiecutter"].pop("full_name")
+
+    summary = _check_and_update_projects(ORGANIZATION)
+
+    assert len(summary.projects) == 1
+    assert summary.projects[0].maintainer is None
+
+
+def test_maintainer_field_can_be_configured(cruft_config: CruftConfig, repo_mock: MagicMock) -> None:
+    # Add existing PR to return early and not perform the whole update shenanigans
+    pr_mock = MagicMock()
+    pr_mock.title = "chore(template): Update template"
+    pr_mock.created_at = datetime(2023, 12, 12)
+    pr_mock.html_url = "https://some-pr.com"
+    repo_mock.get_pulls.return_value = [pr_mock]
+
+    cruft_config.context["cookiecutter"] = {"first_field": "someone", "second_field": "somebody"}
+
+    summary = _check_and_update_projects(ORGANIZATION, maintainer_field=["second_field"])
+    assert len(summary.projects) == 1
+    assert summary.projects[0].maintainer == "somebody"
+
+    summary = _check_and_update_projects(ORGANIZATION, maintainer_field=["first_field", "second_field"])
+    assert len(summary.projects) == 1
+    assert summary.projects[0].maintainer == "someone"
+
+
 @pytest.mark.no_clone_repo_mock
 @patch("voraus_template_updater._update_projects.git.Repo.clone_from")
 def test_clone_repo_modifies_url(clone_from_mock: MagicMock) -> None:

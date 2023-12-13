@@ -48,6 +48,17 @@ def _check_and_update_projects(
             )
         ),
     ] = "",
+    maintainer_field: Annotated[
+        list[str],
+        Option(
+            help="Cookiecutter variable name that contains the name of a project maintainer. "
+            "For example, if one of the templates you are updating contains a 'maintainer' variable, specify this "
+            "option as 'maintainer'. Can be provided multiple times if multiple templates are processed and use "
+            "different variable names to define a maintainer. The first hit from the list will be used."
+        ),
+    ] = [
+        "full_name"
+    ],  # pylint: disable=dangerous-default-value
 ) -> Summary:
     summary = Summary()
 
@@ -80,10 +91,12 @@ def _check_and_update_projects(
 
         template_url = cruft_config.template
 
+        maintainer = _get_maintainer(maintainer_field, cruft_config)
+
         project = Project(
             name=repo.name,
             url=repo.homepage,
-            maintainer=cruft_config.context["cookiecutter"]["full_name"],
+            maintainer=maintainer,
             default_branch=repo.default_branch,
             template_url=template_url,
             template_branch=cruft_config.checkout or "main",
@@ -129,6 +142,15 @@ def _get_cruft_config(repo: Repository) -> CruftConfig:
     response.raise_for_status()
 
     return CruftConfig.model_validate_json(response.content)
+
+
+def _get_maintainer(maintainer_fields: list[str], cruft_config: CruftConfig) -> Optional[str]:
+    maintainer = None
+    for field_name in maintainer_fields:
+        if field_name in cruft_config.context["cookiecutter"]:
+            maintainer = cruft_config.context["cookiecutter"][field_name]
+            break
+    return maintainer
 
 
 def _clone_repo(repo_url: str, github_access_token: str, target_path: Path) -> Repo:
