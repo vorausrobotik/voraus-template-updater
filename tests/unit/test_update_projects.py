@@ -3,6 +3,7 @@
 import logging
 from collections.abc import Generator
 from datetime import datetime
+from pathlib import Path
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -11,13 +12,15 @@ from github.ContentFile import ContentFile
 from requests.exceptions import HTTPError
 
 from voraus_template_updater._schemas import CruftConfig, Status
-from voraus_template_updater._update_projects import _check_and_update_projects, _get_cruft_config
+from voraus_template_updater._update_projects import _check_and_update_projects, _clone_repo, _get_cruft_config
 
 ORGANIZATION = "dummy-organization"
+TEMPLATE_URL = "some-template-url"
 
 
 @pytest.fixture(autouse=True)
 def _set_up_mocks(
+    clone_repo_mock: MagicMock,  # pylint: disable=unused-argument
     get_cruft_config_mock: MagicMock,  # pylint: disable=unused-argument
     organization_mock: MagicMock,
     repo_mock: MagicMock,
@@ -59,7 +62,7 @@ def _organization_mock_fixture() -> Generator[MagicMock, None, None]:
 @pytest.fixture(name="get_cruft_config_mock")
 def _get_cruft_config_mock(request: pytest.FixtureRequest) -> Generator[MagicMock, None, None]:
     config = CruftConfig(
-        template="some-template-url",
+        template=TEMPLATE_URL,
         context={"cookiecutter": {"full_name": "Some Maintainer"}},
         checkout="dev",
         commit="abc",
@@ -73,6 +76,15 @@ def _get_cruft_config_mock(request: pytest.FixtureRequest) -> Generator[MagicMoc
             get_cruft_config_mock.return_value = config
 
             yield get_cruft_config_mock
+
+
+@pytest.fixture(name="clone_repo_mock")
+def _clone_repo_mock_fixture(request: pytest.FixtureRequest) -> Generator[MagicMock, None, None]:
+    if "no_clone_repo_mock" in request.keywords:
+        yield MagicMock()
+    else:
+        with patch("voraus_template_updater._update_projects._clone_repo") as clone_repo_mock:
+            yield clone_repo_mock
 
 
 @patch("voraus_template_updater._update_projects.Github")
@@ -198,3 +210,28 @@ def test_repos_are_skipped_if_pull_request_exists(
     assert len(summary.projects) == 1
     assert summary.projects[0].status == Status.EXISTING_PR
     assert summary.projects[0].pull_request == pr_mock
+
+
+@pytest.mark.no_clone_repo_mock
+@patch("voraus_template_updater._update_projects.git.Repo.clone_from")
+def test_clone_repo_modifies_url(clone_from_mock: MagicMock) -> None:
+    _clone_repo("git@github.com:organization/repo.git", "token", Path())
+
+    clone_from_mock.assert_called_once_with(
+        url="https://x-access-token:token@github.com/organization/repo", to_path=Path()
+    )
+
+
+@patch("voraus_template_updater._update_projects.cruft.check")
+def test_up_to_date_project(
+    cruft_check_mock: MagicMock, repo_mock: MagicMock, caplog: pytest.LogCaptureFixture
+) -> None:
+    cruft_check_mock.return_value = True
+
+    with caplog.at_level(logging.INFO):
+        summary = _check_and_update_projects(ORGANIZATION)
+
+    assert caplog.record_tuples == [("voraus_template_updater", logging.INFO, f"Checking '{repo_mock.name}'")]
+
+    assert len(summary.projects) == 1
+    assert summary.projects[0].status == Status.UP_TO_DATE
