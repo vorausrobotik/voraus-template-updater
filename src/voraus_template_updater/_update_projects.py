@@ -205,5 +205,5 @@ def _get_pr_body(project: Project, github_access_token: str) -> str:
     return PR_BODY_HEADER.format(project.template_branch) + "- " + "\n\n- ".join(commit_messages) + "\n"
 
 
-if __name__ == "__main__":
+if __name__ == "__main__":  # pragma: no cover
     _check_and_update_projects("vorausrobotik")
