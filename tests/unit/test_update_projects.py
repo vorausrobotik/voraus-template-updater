@@ -9,10 +9,16 @@ from unittest.mock import MagicMock, patch
 import pytest
 from github import GithubException
 from github.ContentFile import ContentFile
+from github.PullRequest import PullRequest
 from requests.exceptions import HTTPError
 
 from voraus_template_updater._schemas import CruftConfig, Status
-from voraus_template_updater._update_projects import _check_and_update_projects, _clone_repo, _get_cruft_config
+from voraus_template_updater._update_projects import (
+    PR_TITLE,
+    _check_and_update_projects,
+    _clone_repo,
+    _get_cruft_config,
+)
 
 ORGANIZATION = "dummy-organization"
 TEMPLATE_URL = "some-template-url"
@@ -20,8 +26,8 @@ TEMPLATE_URL = "some-template-url"
 
 @pytest.fixture(autouse=True)
 def _set_up_mocks(
-    clone_repo_mock: MagicMock,  # pylint: disable=unused-argument
-    get_cruft_config_mock: MagicMock,  # pylint: disable=unused-argument
+    cloned_repo_mock: MagicMock,  # pylint: disable=unused-argument
+    cruft_config: MagicMock,  # pylint: disable=unused-argument
     organization_mock: MagicMock,
     repo_mock: MagicMock,
 ) -> Generator[None, None, None]:
@@ -40,8 +46,12 @@ def _repo_mock_fixture() -> Generator[MagicMock, None, None]:
 
     content_file_mock = MagicMock(spec=ContentFile)
     content_file_mock.download_url = "some_url"
-
     repo_mock.get_contents.return_value = content_file_mock
+
+    pull_request_mock = MagicMock(spec=PullRequest)
+    pull_request_mock.created_at = datetime(2023, 12, 12)
+    pull_request_mock.html_url = "https://some-pr.com"
+    repo_mock.create_pull.return_value = pull_request_mock
 
     yield repo_mock
 
@@ -59,8 +69,8 @@ def _organization_mock_fixture() -> Generator[MagicMock, None, None]:
         yield organization_mock
 
 
-@pytest.fixture(name="get_cruft_config_mock")
-def _get_cruft_config_mock(request: pytest.FixtureRequest) -> Generator[MagicMock, None, None]:
+@pytest.fixture(name="cruft_config")
+def _cruft_config_fixture(request: pytest.FixtureRequest) -> Generator[CruftConfig, None, None]:
     config = CruftConfig(
         template=TEMPLATE_URL,
         context={"cookiecutter": {"full_name": "Some Maintainer"}},
@@ -75,16 +85,19 @@ def _get_cruft_config_mock(request: pytest.FixtureRequest) -> Generator[MagicMoc
         with patch("voraus_template_updater._update_projects._get_cruft_config") as get_cruft_config_mock:
             get_cruft_config_mock.return_value = config
 
-            yield get_cruft_config_mock
+            yield config
 
 
-@pytest.fixture(name="clone_repo_mock")
-def _clone_repo_mock_fixture(request: pytest.FixtureRequest) -> Generator[MagicMock, None, None]:
+@pytest.fixture(name="cloned_repo_mock")
+def _cloned_repo_mock_fixture(request: pytest.FixtureRequest) -> Generator[MagicMock, None, None]:
     if "no_clone_repo_mock" in request.keywords:
         yield MagicMock()
     else:
         with patch("voraus_template_updater._update_projects._clone_repo") as clone_repo_mock:
-            yield clone_repo_mock
+            cloned_repo_mock = MagicMock()
+            cloned_repo_mock.working_dir = "workdir"
+            clone_repo_mock.return_value = cloned_repo_mock
+            yield cloned_repo_mock
 
 
 @patch("voraus_template_updater._update_projects.Github")
@@ -181,6 +194,29 @@ def test_repos_are_skipped_if_cruft_json_cannot_be_downloaded(
     assert summary.skipped_projects[0].reason == "Cannot download '.cruft.json' file"
 
 
+@pytest.mark.no_get_cruft_config_mock
+@patch("voraus_template_updater._update_projects.requests.get")
+def test_successful_cruft_config_retrieval(requests_get_mock: MagicMock, repo_mock: MagicMock) -> None:
+    expected_config = CruftConfig(
+        template=TEMPLATE_URL,
+        context={"cookiecutter": {"full_name": "Some Maintainer"}},
+        checkout="dev",
+        commit="abc",
+        directory=None,
+    )
+
+    repo_mock.get_contents.return_value.download_url = "http://example.com/.cruft.json"
+
+    mock_response = MagicMock()
+    mock_response.content = expected_config.model_dump_json()
+
+    requests_get_mock.return_value = mock_response
+
+    result = _get_cruft_config(repo_mock)
+
+    assert result == expected_config
+
+
 @pytest.mark.parametrize(["pr_title"], [("chore: Update Python template",), ("chore(template): Update template",)])
 def test_repos_are_skipped_if_pull_request_exists(
     pr_title: str,
@@ -235,3 +271,52 @@ def test_up_to_date_project(
 
     assert len(summary.projects) == 1
     assert summary.projects[0].status == Status.UP_TO_DATE
+
+
+@patch("voraus_template_updater._update_projects._get_pr_body")
+@patch("voraus_template_updater._update_projects.cruft.update")
+@patch("voraus_template_updater._update_projects.cruft.check")
+def test_update_project_success(
+    cruft_check_mock: MagicMock,
+    cruft_update_mock: MagicMock,
+    get_pr_body_mock: MagicMock,
+    repo_mock: MagicMock,
+    cloned_repo_mock: MagicMock,
+    cruft_config: CruftConfig,
+    caplog: pytest.LogCaptureFixture,
+) -> None:
+    cruft_check_mock.return_value = False
+    get_pr_body_mock.return_value = "pr body"
+
+    branch_mock = MagicMock()
+    branch_mock.name = "chore/update-template-"
+    cloned_repo_mock.create_head.return_value = branch_mock
+
+    with caplog.at_level(logging.INFO):
+        summary = _check_and_update_projects(ORGANIZATION)
+
+    cloned_repo_mock.create_head.assert_called_once()
+    cloned_repo_mock.create_head.call_args[0][0].startswith(branch_mock.name)
+
+    branch_mock.checkout.assert_called_once()
+    cruft_update_mock.assert_called_once_with(Path("workdir"), checkout="dev")
+
+    cloned_repo_mock.git.add.assert_called_with(all=True)
+    cloned_repo_mock.index.commit.assert_called_with(PR_TITLE)
+    cloned_repo_mock.git.push.assert_called_with("--set-upstream", "origin", branch_mock)
+
+    repo_mock.create_pull.assert_called_once_with(
+        base=repo_mock.default_branch, head=branch_mock.name, title=PR_TITLE, body="pr body"
+    )
+
+    assert caplog.record_tuples[1] == (
+        "voraus_template_updater",
+        logging.INFO,
+        f"Created pull request for '{repo_mock.name}' to get up to date "
+        f"with the template's '{cruft_config.checkout}' branch.",
+    )
+
+    assert len(summary.projects) == 1
+    assert summary.projects[0].status == Status.UPDATED_THIS_RUN
+    assert summary.projects[0].pull_request is not None
+    assert summary.projects[0].pull_request.html_url == "https://some-pr.com"

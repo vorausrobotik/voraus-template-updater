@@ -128,7 +128,7 @@ def _get_cruft_config(repo: Repository) -> CruftConfig:
     response = requests.get(cruft_json.download_url, timeout=10)
     response.raise_for_status()
 
-    return CruftConfig.model_validate_strings(response.content)
+    return CruftConfig.model_validate_json(response.content)
 
 
 def _clone_repo(repo_url: str, github_access_token: str, target_path: Path) -> Repo:
@@ -169,7 +169,7 @@ def _update_project(
 
     _logger.info(
         f"Created pull request for '{remote_repo.name}' to get "
-        f"up-to-date with the template's '{project.template_branch}' branch."
+        f"up to date with the template's '{project.template_branch}' branch."
     )
 
     return pull_request
