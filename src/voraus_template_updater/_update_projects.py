@@ -202,7 +202,7 @@ def _get_pr_body(project: Project, github_access_token: str) -> str:
     commit_messages = ["\n  ".join(commit_message.strip().splitlines()) for commit_message in commit_messages]
 
     # Construct a pull request message containing the PR header and a bullet point list of changes and their explanation
-    return PR_BODY_HEADER.format(project.template_branch) + "- " + "\n- ".join(commit_messages)
+    return PR_BODY_HEADER.format(project.template_branch) + "- " + "\n\n- ".join(commit_messages) + "\n"
 
 
 if __name__ == "__main__":

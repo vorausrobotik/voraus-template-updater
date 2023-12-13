@@ -26,7 +26,7 @@ TEMPLATE_URL = "some-template-url"
 
 @pytest.fixture(autouse=True)
 def _set_up_mocks(
-    cloned_repo_mock: MagicMock,  # pylint: disable=unused-argument
+    cloned_repo_mocks: list[MagicMock],  # pylint: disable=unused-argument
     cruft_config: MagicMock,  # pylint: disable=unused-argument
     organization_mock: MagicMock,
     repo_mock: MagicMock,
@@ -88,16 +88,23 @@ def _cruft_config_fixture(request: pytest.FixtureRequest) -> Generator[CruftConf
             yield config
 
 
-@pytest.fixture(name="cloned_repo_mock")
-def _cloned_repo_mock_fixture(request: pytest.FixtureRequest) -> Generator[MagicMock, None, None]:
+@pytest.fixture(name="cloned_repo_mocks")
+def _cloned_repo_mocks_fixture(request: pytest.FixtureRequest) -> Generator[list[MagicMock], None, None]:
+    """Yields a list of git.Repo mocks that can be used for mocking behavior on a cloned project or template repo."""
+
     if "no_clone_repo_mock" in request.keywords:
         yield MagicMock()
     else:
         with patch("voraus_template_updater._update_projects._clone_repo") as clone_repo_mock:
-            cloned_repo_mock = MagicMock()
-            cloned_repo_mock.working_dir = "workdir"
-            clone_repo_mock.return_value = cloned_repo_mock
-            yield cloned_repo_mock
+
+            def _create_cloned_repo_mock() -> MagicMock:
+                cloned_repo_mock = MagicMock()
+                cloned_repo_mock.working_dir = "workdir"
+                return cloned_repo_mock
+
+            cloned_repo_mocks = [_create_cloned_repo_mock(), _create_cloned_repo_mock()]
+            clone_repo_mock.side_effect = cloned_repo_mocks
+            yield cloned_repo_mocks
 
 
 @patch("voraus_template_updater._update_projects.Github")
@@ -273,40 +280,59 @@ def test_up_to_date_project(
     assert summary.projects[0].status == Status.UP_TO_DATE
 
 
-@patch("voraus_template_updater._update_projects._get_pr_body")
 @patch("voraus_template_updater._update_projects.cruft.update")
 @patch("voraus_template_updater._update_projects.cruft.check")
 def test_update_project_success(
     cruft_check_mock: MagicMock,
     cruft_update_mock: MagicMock,
-    get_pr_body_mock: MagicMock,
     repo_mock: MagicMock,
-    cloned_repo_mock: MagicMock,
+    cloned_repo_mocks: list[MagicMock],
     cruft_config: CruftConfig,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
     cruft_check_mock.return_value = False
-    get_pr_body_mock.return_value = "pr body"
+
+    cloned_project_repo = cloned_repo_mocks[0]
+    cloned_template_repo = cloned_repo_mocks[1]
 
     branch_mock = MagicMock()
     branch_mock.name = "chore/update-template-"
-    cloned_repo_mock.create_head.return_value = branch_mock
+    cloned_project_repo.create_head.return_value = branch_mock
+
+    def _create_commit_mock(i: int) -> MagicMock:
+        commit_mock = MagicMock()
+        commit_mock.message = f"Commit title (#{i})\n\nDescription {i}\n"
+        return commit_mock
+
+    cloned_template_repo.git.rev_parse.return_value = "newest_commit"
+    cloned_template_repo.iter_commits.return_value = [_create_commit_mock(i) for i in range(2)]
 
     with caplog.at_level(logging.INFO):
         summary = _check_and_update_projects(ORGANIZATION)
 
-    cloned_repo_mock.create_head.assert_called_once()
-    cloned_repo_mock.create_head.call_args[0][0].startswith(branch_mock.name)
+    cloned_project_repo.create_head.assert_called_once()
+    cloned_project_repo.create_head.call_args[0][0].startswith(branch_mock.name)
 
     branch_mock.checkout.assert_called_once()
     cruft_update_mock.assert_called_once_with(Path("workdir"), checkout="dev")
 
-    cloned_repo_mock.git.add.assert_called_with(all=True)
-    cloned_repo_mock.index.commit.assert_called_with(PR_TITLE)
-    cloned_repo_mock.git.push.assert_called_with("--set-upstream", "origin", branch_mock)
+    cloned_template_repo.git.checkout.assert_called_once_with(cruft_config.checkout)
+    cloned_template_repo.git.rev_parse.assert_called_once_with(cruft_config.checkout)
+    cloned_template_repo.iter_commits.assert_called_once_with(f"{cruft_config.commit}..newest_commit")
+
+    cloned_project_repo.git.add.assert_called_with(all=True)
+    cloned_project_repo.index.commit.assert_called_with(PR_TITLE)
+    cloned_project_repo.git.push.assert_called_with("--set-upstream", "origin", branch_mock)
+
+    expected_pr_body = (
+        "Contains the following changes to get up-to-date with the newest version of the template's 'dev' branch."
+        "\n\n"
+        "- Commit title ([PR](some-template-url/pull/0))\n  \n  Description 0\n\n"
+        "- Commit title ([PR](some-template-url/pull/1))\n  \n  Description 1\n"
+    )
 
     repo_mock.create_pull.assert_called_once_with(
-        base=repo_mock.default_branch, head=branch_mock.name, title=PR_TITLE, body="pr body"
+        base=repo_mock.default_branch, head=branch_mock.name, title=PR_TITLE, body=expected_pr_body
     )
 
     assert caplog.record_tuples[1] == (
