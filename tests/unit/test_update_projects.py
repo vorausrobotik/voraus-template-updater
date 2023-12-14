@@ -40,7 +40,7 @@ def _set_up_mocks(
 def _repo_mock_fixture() -> Generator[MagicMock, None, None]:
     repo_mock = MagicMock()
     repo_mock.name = "repo"
-    repo_mock.homepage = "https://some-repo.com"
+    repo_mock.html_url = "https://some-repo.com"
     repo_mock.default_branch = "default-branch"
     repo_mock.archived = False
 

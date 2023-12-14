@@ -67,7 +67,7 @@ def _check_and_update_projects(  # pylint: disable=dangerous-default-value # Onl
         if repo.archived:
             _logger.info(f"Skipped '{repo.name}'. Project archived.")
             summary.skipped_projects.append(
-                SkippedProject(name=repo.name, url=repo.homepage, reason="Project archived")
+                SkippedProject(name=repo.name, url=repo.html_url, reason="Project archived")
             )
             continue
 
@@ -76,7 +76,7 @@ def _check_and_update_projects(  # pylint: disable=dangerous-default-value # Onl
         except GithubException:
             _logger.info(f"Skipped '{repo.name}'. Project does not have a '.cruft.json' file.")
             summary.skipped_projects.append(
-                SkippedProject(name=repo.name, url=repo.homepage, reason="No '.cruft.json' file")
+                SkippedProject(name=repo.name, url=repo.html_url, reason="No '.cruft.json' file")
             )
             continue
         except HTTPError:
@@ -84,7 +84,7 @@ def _check_and_update_projects(  # pylint: disable=dangerous-default-value # Onl
                 f"Skipped '{repo.name}'. Failed to retrieve '.cruft.json' file although the project has one."
             )
             summary.skipped_projects.append(
-                SkippedProject(name=repo.name, url=repo.homepage, reason="Cannot download '.cruft.json' file")
+                SkippedProject(name=repo.name, url=repo.html_url, reason="Cannot download '.cruft.json' file")
             )
             continue
 
@@ -94,7 +94,7 @@ def _check_and_update_projects(  # pylint: disable=dangerous-default-value # Onl
 
         project = Project(
             name=repo.name,
-            url=repo.homepage,
+            url=repo.html_url,
             maintainer=maintainer,
             default_branch=repo.default_branch,
             template_url=template_url,
