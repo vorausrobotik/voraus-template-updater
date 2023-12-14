@@ -6,6 +6,7 @@ from typing import Dict, List, Optional
 
 from github.PullRequest import PullRequest
 from pydantic import BaseModel, ConfigDict
+from rich import box
 from rich.console import Console
 from rich.table import Table
 from rich.text import Text
@@ -71,7 +72,7 @@ class Summary(BaseModel):
 
 def _print_table_of_projects(projects: List[Project]) -> None:
     title = _get_table_title(projects)
-    table = Table(title=title)
+    table = Table(title=title, box=box.SQUARE)
     table.add_column("Maintainer")
     table.add_column("Projects")
 
@@ -150,7 +151,7 @@ def _get_projects_by_maintainer(projects: List[Project]) -> Dict[Optional[str], 
 
 
 def _print_table_of_skipped_projects(projects: List[SkippedProject]) -> None:
-    table = Table(title=f"Skipped projects: {len(projects)}")
+    table = Table(title=f"Skipped projects: {len(projects)}", box=box.SQUARE)
     table.add_column("Project")
     table.add_column("URL")
     table.add_column("Skip reason")

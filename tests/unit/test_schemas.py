@@ -18,4 +18,4 @@ def test_summary_printing(datetime_mock: MagicMock, capsys: CaptureFixture, reso
     summary.print()
     stdout = capsys.readouterr().out
 
-    assert stdout == (resource_dir / "example_summary_output.txt").read_text()
+    assert stdout == (resource_dir / "example_summary_output.txt").read_text(encoding="utf-8")
