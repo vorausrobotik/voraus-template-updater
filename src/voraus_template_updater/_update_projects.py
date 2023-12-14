@@ -6,7 +6,7 @@ import re
 from datetime import datetime
 from pathlib import Path
 from tempfile import TemporaryDirectory
-from typing import Annotated, Optional
+from typing import List, Optional
 
 import cruft
 import git
@@ -18,6 +18,7 @@ from github.PullRequest import PullRequest as GitHubPullRequest
 from github.Repository import Repository
 from requests import HTTPError
 from typer import Argument, Option, Typer
+from typing_extensions import Annotated
 
 from voraus_template_updater._schemas import CruftConfig, Project, SkippedProject, Status, Summary
 
@@ -37,7 +38,7 @@ app = Typer(add_completion=False)
 
 
 @app.command()
-def _check_and_update_projects(
+def _check_and_update_projects(  # pylint: disable=dangerous-default-value # Only meant for CLI usage
     github_organization: Annotated[str, Argument(help="The GitHub organization in which to update repositories.")],
     github_access_token: Annotated[
         str,
@@ -49,16 +50,14 @@ def _check_and_update_projects(
         ),
     ] = "",
     maintainer_field: Annotated[
-        list[str],
+        List[str],
         Option(
             help="Cookiecutter variable name that contains the name of a project maintainer. "
             "For example, if one of the templates you are updating contains a 'maintainer' variable, specify this "
             "option as 'maintainer'. Can be provided multiple times if multiple templates are processed and use "
             "different variable names to define a maintainer. The first hit from the list will be used."
         ),
-    ] = [
-        "full_name"
-    ],  # pylint: disable=dangerous-default-value
+    ] = ["full_name"],
 ) -> Summary:
     summary = Summary()
 
@@ -132,7 +131,7 @@ def _check_and_update_projects(
 
 def _get_cruft_config(repo: Repository) -> CruftConfig:
     cruft_json = repo.get_contents(".cruft.json")
-    if isinstance(cruft_json, list):
+    if isinstance(cruft_json, List):
         raise RuntimeError(
             f"Repository '{repo.name}' contains more than one '.cruft.json' file. "
             "This use case is currently not supported."
@@ -144,7 +143,7 @@ def _get_cruft_config(repo: Repository) -> CruftConfig:
     return CruftConfig.model_validate_json(response.content)
 
 
-def _get_maintainer(maintainer_fields: list[str], cruft_config: CruftConfig) -> Optional[str]:
+def _get_maintainer(maintainer_fields: List[str], cruft_config: CruftConfig) -> Optional[str]:
     maintainer = None
     for field_name in maintainer_fields:
         if field_name in cruft_config.context["cookiecutter"]:
@@ -154,10 +153,12 @@ def _get_maintainer(maintainer_fields: list[str], cruft_config: CruftConfig) -> 
 
 
 def _clone_repo(repo_url: str, github_access_token: str, target_path: Path) -> Repo:
+    url = repo_url.replace("git@github.com:", "https://github.com/")
+    url = url[:-4] if url.endswith(".git") else url  # str.removesuffix only supported by Python >= 3.9
+    url = url.replace("github.com", f"x-access-token:{github_access_token}@github.com")
+
     return git.Repo.clone_from(
-        url=repo_url.replace("git@github.com:", "https://github.com/")
-        .removesuffix(".git")
-        .replace("github.com", f"x-access-token:{github_access_token}@github.com"),
+        url=url,
         to_path=target_path,
     )
 
@@ -213,7 +214,9 @@ def _get_pr_body(project: Project, github_access_token: str) -> str:
     # example `feat: Added feature (#123)`. However GitHub will resolve these links to the current repository although
     # they refer to pull requests in the template repository. We therefore need to change these links to point to the
     # pull requests in the template repository.
-    link = project.template_url.replace("git@github.com:", "https://github.com/").removesuffix(".git") + "/pull/{}"
+    link = project.template_url.replace("git@github.com:", "https://github.com/")
+    link = link[:-4] if link.endswith(".git") else link  # str.removesuffix only supported by Python >= 3.9
+    link += "/pull/{}"
     for i_message, message in enumerate(commit_messages):
         commit_messages[i_message] = re.sub(
             r"\(#(\d+)\)", lambda match: f"([PR]({link.format(match.groups()[0])}))", message

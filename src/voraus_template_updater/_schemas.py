@@ -2,7 +2,7 @@
 
 from datetime import datetime
 from enum import Enum
-from typing import Optional
+from typing import Dict, List, Optional
 
 from github.PullRequest import PullRequest
 from pydantic import BaseModel, ConfigDict
@@ -56,8 +56,8 @@ class Project(BaseModel):
 class Summary(BaseModel):
     """A summary of the checked and updates projects."""
 
-    projects: list[Project] = []
-    skipped_projects: list[SkippedProject] = []
+    projects: List[Project] = []
+    skipped_projects: List[SkippedProject] = []
 
     def print(self) -> None:
         """Prints the summary."""
@@ -69,7 +69,7 @@ class Summary(BaseModel):
             _print_table_of_skipped_projects(self.skipped_projects)
 
 
-def _print_table_of_projects(projects: list[Project]) -> None:
+def _print_table_of_projects(projects: List[Project]) -> None:
     title = _get_table_title(projects)
     table = Table(title=title)
     table.add_column("Maintainer")
@@ -125,7 +125,7 @@ def _print_table_of_projects(projects: list[Project]) -> None:
     Console().print(table)
 
 
-def _get_table_title(projects: list[Project]) -> str:
+def _get_table_title(projects: List[Project]) -> str:
     processed_projects = len(projects)
     up_to_date_projects = len(list(filter(lambda p: p.status == Status.UP_TO_DATE, projects)))
 
@@ -136,8 +136,8 @@ def _get_table_title(projects: list[Project]) -> str:
     )
 
 
-def _get_projects_by_maintainer(projects: list[Project]) -> dict[Optional[str], list[Project]]:
-    projects_by_maintainer: dict[Optional[str], list[Project]] = {}
+def _get_projects_by_maintainer(projects: List[Project]) -> Dict[Optional[str], List[Project]]:
+    projects_by_maintainer: Dict[Optional[str], List[Project]] = {}
 
     for project in sorted(
         projects, key=lambda x: x.maintainer or "z" * 100  # Projects without maintainers sorted to end
@@ -149,7 +149,7 @@ def _get_projects_by_maintainer(projects: list[Project]) -> dict[Optional[str], 
     return projects_by_maintainer
 
 
-def _print_table_of_skipped_projects(projects: list[SkippedProject]) -> None:
+def _print_table_of_skipped_projects(projects: List[SkippedProject]) -> None:
     table = Table(title=f"Skipped projects: {len(projects)}")
     table.add_column("Project")
     table.add_column("URL")

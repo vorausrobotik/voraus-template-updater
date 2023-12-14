@@ -1,9 +1,9 @@
 """Contains unit tests for template updates."""
 
 import logging
-from collections.abc import Generator
 from datetime import datetime
 from pathlib import Path
+from typing import Generator, List
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -26,7 +26,7 @@ TEMPLATE_URL = "some-template-url"
 
 @pytest.fixture(autouse=True)
 def _set_up_mocks(
-    cloned_repo_mocks: list[MagicMock],  # pylint: disable=unused-argument
+    cloned_repo_mocks: List[MagicMock],  # pylint: disable=unused-argument
     cruft_config: MagicMock,  # pylint: disable=unused-argument
     organization_mock: MagicMock,
     repo_mock: MagicMock,
@@ -89,7 +89,7 @@ def _cruft_config_fixture(request: pytest.FixtureRequest) -> Generator[CruftConf
 
 
 @pytest.fixture(name="cloned_repo_mocks")
-def _cloned_repo_mocks_fixture(request: pytest.FixtureRequest) -> Generator[list[MagicMock], None, None]:
+def _cloned_repo_mocks_fixture(request: pytest.FixtureRequest) -> Generator[List[MagicMock], None, None]:
     """Yields a list of git.Repo mocks that can be used for mocking behavior on a cloned project or template repo."""
 
     if "no_clone_repo_mock" in request.keywords:
@@ -185,8 +185,8 @@ def test_repos_are_skipped_if_cruft_json_cannot_be_downloaded(
     with caplog.at_level(logging.WARNING):
         summary = _check_and_update_projects(ORGANIZATION)
 
-    assert requests_mock.get.called_once_with(repo_mock.get_contents.return_value.download_url, timeout=10)
-    assert response_mock.raise_for_status.called_once()
+    requests_mock.get.assert_called_once_with(repo_mock.get_contents.return_value.download_url, timeout=10)
+    response_mock.raise_for_status.assert_called_once()
 
     assert caplog.record_tuples == [
         (
@@ -324,7 +324,7 @@ def test_update_project_success(
     cruft_check_mock: MagicMock,
     cruft_update_mock: MagicMock,
     repo_mock: MagicMock,
-    cloned_repo_mocks: list[MagicMock],
+    cloned_repo_mocks: List[MagicMock],
     cruft_config: CruftConfig,
     caplog: pytest.LogCaptureFixture,
 ) -> None:
