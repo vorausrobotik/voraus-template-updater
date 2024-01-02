@@ -18,6 +18,8 @@ from voraus_template_updater._update_projects import (
     _check_and_update_projects,
     _clone_repo,
     _get_cruft_config,
+    _get_pr_body,
+    _get_pr_title,
 )
 
 ORGANIZATION = "dummy-organization"
@@ -318,11 +320,13 @@ def test_up_to_date_project(
     assert summary.projects[0].status == Status.UP_TO_DATE
 
 
+@pytest.mark.parametrize("is_incremental_update", [True, False], ids=["Incremental Update", "Bulk Update"])
 @patch("voraus_template_updater._update_projects.cruft.update")
 @patch("voraus_template_updater._update_projects.cruft.check")
 def test_update_project_success(
     cruft_check_mock: MagicMock,
     cruft_update_mock: MagicMock,
+    is_incremental_update: bool,
     repo_mock: MagicMock,
     cloned_repo_mocks: List[MagicMock],
     cruft_config: CruftConfig,
@@ -343,7 +347,8 @@ def test_update_project_success(
         return commit_mock
 
     cloned_template_repo.git.rev_parse.return_value = "newest_commit"
-    cloned_template_repo.iter_commits.return_value = [_create_commit_mock(i) for i in range(2)]
+    number_new_commits = 1 if is_incremental_update else 2
+    cloned_template_repo.iter_commits.return_value = [_create_commit_mock(i) for i in range(number_new_commits)]
 
     with caplog.at_level(logging.INFO):
         summary = _check_and_update_projects(ORGANIZATION)
@@ -359,18 +364,31 @@ def test_update_project_success(
     cloned_template_repo.iter_commits.assert_called_once_with(f"{cruft_config.commit}..newest_commit")
 
     cloned_project_repo.git.add.assert_called_with(all=True)
-    cloned_project_repo.index.commit.assert_called_with(PR_TITLE)
+    if is_incremental_update:
+        cloned_project_repo.index.commit.assert_called_with(
+            "Commit title ([PR](some-template-url/pull/0))\n\nDescription 0\n"
+        )
+    else:
+        cloned_project_repo.index.commit.assert_called_with(PR_TITLE)
     cloned_project_repo.git.push.assert_called_with("--set-upstream", "origin", branch_mock)
 
-    expected_pr_body = (
-        "Contains the following changes to get up-to-date with the newest version of the template's 'dev' branch."
-        "\n\n"
-        "- Commit title ([PR](some-template-url/pull/0))\n  \n  Description 0\n\n"
-        "- Commit title ([PR](some-template-url/pull/1))\n  \n  Description 1\n"
-    )
+    if is_incremental_update:
+        expected_pr_body = "Description 0"
+    else:
+        expected_pr_body = (
+            "Contains the following changes to get up-to-date with the newest version of the template's 'dev' branch."
+            "\n\n"
+            "- Commit title ([PR](some-template-url/pull/0))\n  \n  Description 0\n\n"
+            "- Commit title ([PR](some-template-url/pull/1))\n  \n  Description 1\n"
+        )
+
+    if is_incremental_update:
+        expected_pr_title = "Commit title ([PR](some-template-url/pull/0))"
+    else:
+        expected_pr_title = PR_TITLE
 
     repo_mock.create_pull.assert_called_once_with(
-        base=repo_mock.default_branch, head=branch_mock.name, title=PR_TITLE, body=expected_pr_body
+        base=repo_mock.default_branch, head=branch_mock.name, title=expected_pr_title, body=expected_pr_body
     )
 
     assert caplog.record_tuples[1] == (
@@ -384,3 +402,43 @@ def test_update_project_success(
     assert summary.projects[0].status == Status.UPDATED_THIS_RUN
     assert summary.projects[0].pull_request is not None
     assert summary.projects[0].pull_request.html_url == "https://some-pr.com"
+
+
+@pytest.mark.parametrize(
+    argnames=["commit_messages", "expected_title"],
+    argvalues=[
+        ([], PR_TITLE),
+        (["Lorem ipsum"], "Lorem ipsum"),
+        (["Lorem ipsum\n\ndolor sit amet\n"], "Lorem ipsum"),
+        (["Lorem ipsum\ndolor sit amet\n"], "Lorem ipsum"),
+        (["Lorem ipsum\n\ndolor sit amet\n", "Commit title\n Commit body.\n"], PR_TITLE),
+    ],
+)
+def test_get_pr_title(commit_messages: List[str], expected_title: str) -> None:
+    assert _get_pr_title(commit_messages) == expected_title
+
+
+@pytest.mark.parametrize(
+    argnames=["commit_messages", "expected_body"],
+    argvalues=[
+        (
+            [],
+            "Contains the following changes to get up-to-date with the newest version of the template's 'dev' branch."
+            "\n\n- \n",
+        ),  # Empty commit should never happen. But this test shows, that we do not crash.
+        (["Lorem ipsum"], ""),
+        (["Lorem ipsum\n\ndolor sit amet"], "dolor sit amet"),
+        (["Lorem ipsum\ndolor sit amet\n"], "dolor sit amet"),
+        (
+            ["Lorem ipsum", "Commit title\n\nCommit body.\n"],
+            "Contains the following changes to get up-to-date with the newest version of the template's 'dev' branch."
+            "\n\n"
+            "- Lorem ipsum\n\n"
+            "- Commit title\n  \n  Commit body.\n",
+        ),
+    ],
+)
+def test_get_pr_body(commit_messages: List[str], expected_body: str) -> None:
+    project = MagicMock()
+    project.template_branch = "dev"
+    assert _get_pr_body(project, commit_messages) == expected_body

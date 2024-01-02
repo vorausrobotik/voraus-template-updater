@@ -180,14 +180,19 @@ def _update_project(
 
     cruft.update(Path(local_repo.working_dir), checkout=project.template_branch)
 
+    template_commit_messages = _get_template_commit_messages(project, github_access_token)
     local_repo.git.add(all=True)
-    local_repo.index.commit(PR_TITLE)
+    if len(template_commit_messages) == 1:
+        local_repo.index.commit(template_commit_messages[0])
+    else:
+        local_repo.index.commit(PR_TITLE)
     local_repo.git.push("--set-upstream", "origin", branch)
 
-    pr_body = _get_pr_body(project, github_access_token)
+    pr_title = _get_pr_title(template_commit_messages)
+    pr_body = _get_pr_body(project, template_commit_messages)
 
     pull_request = remote_repo.create_pull(
-        base=remote_repo.default_branch, head=branch.name, title=PR_TITLE, body=pr_body
+        base=remote_repo.default_branch, head=branch.name, title=pr_title, body=pr_body
     )
 
     _logger.info(
@@ -198,7 +203,7 @@ def _update_project(
     return pull_request
 
 
-def _get_pr_body(project: Project, github_access_token: str) -> str:
+def _get_template_commit_messages(project: Project, github_access_token: str) -> List[str]:
     with TemporaryDirectory() as tmp_path:
         template_repo = _clone_repo(project.template_url, github_access_token, Path(tmp_path))
 
@@ -222,12 +227,33 @@ def _get_pr_body(project: Project, github_access_token: str) -> str:
             r"\(#(\d+)\)", lambda match: f"([PR]({link.format(match.groups()[0])}))", message
         )
 
+    return commit_messages
+
+
+def _get_pr_title(template_commit_messages: List[str]) -> str:
+    if len(template_commit_messages) == 1:
+        message = template_commit_messages[0]
+        return message.strip().splitlines()[0]
+
+    return PR_TITLE
+
+
+def _get_pr_body(project: Project, template_commit_messages: List[str]) -> str:
+    if len(template_commit_messages) == 1:
+        message = template_commit_messages[0]
+        lines = message.strip().splitlines()
+        if len(lines) > 1:
+            return "".join(message.strip().splitlines()[1:])
+        return ""
+
     # Indent all lines after the first line of a commit message by two spaces
     # This leads to nicer bullet points in the pull request body
-    commit_messages = ["\n  ".join(commit_message.strip().splitlines()) for commit_message in commit_messages]
+    template_commit_messages = [
+        "\n  ".join(commit_message.strip().splitlines()) for commit_message in template_commit_messages
+    ]
 
     # Construct a pull request message containing the PR header and a bullet point list of changes and their explanation
-    return PR_BODY_HEADER.format(project.template_branch) + "- " + "\n\n- ".join(commit_messages) + "\n"
+    return PR_BODY_HEADER.format(project.template_branch) + "- " + "\n\n- ".join(template_commit_messages) + "\n"
 
 
 if __name__ == "__main__":  # pragma: no cover
