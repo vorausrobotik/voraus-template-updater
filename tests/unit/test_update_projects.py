@@ -408,10 +408,10 @@ def test_update_project_success(
     argnames=["commit_messages", "expected_title"],
     argvalues=[
         ([], PR_TITLE),
-        (["Lorem ipsum"], "Lorem ipsum"),
-        (["Lorem ipsum\n\ndolor sit amet\n"], "Lorem ipsum"),
-        (["Lorem ipsum\ndolor sit amet\n"], "Lorem ipsum"),
-        (["Lorem ipsum\n\ndolor sit amet\n", "Commit title\n Commit body.\n"], PR_TITLE),
+        (["Commit Title"], "Commit Title"),
+        (["Commit Title\n\nCommit Body\n"], "Commit Title"),
+        (["Commit Title\nCommit Body\n"], "Commit Title"),
+        (["Commit Title 1\n\nCommit Body 1\n", "Commit Title 2\n Commit body 1.\n"], PR_TITLE),
     ],
 )
 def test_get_pr_title(commit_messages: List[str], expected_title: str) -> None:
@@ -426,14 +426,14 @@ def test_get_pr_title(commit_messages: List[str], expected_title: str) -> None:
             "Contains the following changes to get up-to-date with the newest version of the template's 'dev' branch."
             "\n\n- \n",
         ),  # Empty commit should never happen. But this test shows, that we do not crash.
-        (["Lorem ipsum"], ""),
-        (["Lorem ipsum\n\ndolor sit amet"], "dolor sit amet"),
-        (["Lorem ipsum\ndolor sit amet\n"], "dolor sit amet"),
+        (["Commit Title"], ""),
+        (["Commit Title\n\nCommit Body"], "Commit Body"),
+        (["Commit Title\nCommit Body\n"], "Commit Body"),
         (
-            ["Lorem ipsum", "Commit title\n\nCommit body.\n"],
+            ["Commit Title", "Commit title\n\nCommit body.\n"],
             "Contains the following changes to get up-to-date with the newest version of the template's 'dev' branch."
             "\n\n"
-            "- Lorem ipsum\n\n"
+            "- Commit Title\n\n"
             "- Commit title\n  \n  Commit body.\n",
         ),
     ],
