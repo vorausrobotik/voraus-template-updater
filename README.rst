@@ -16,6 +16,9 @@ Run with::
 A GitHub token will be retrieved from the ``GITHUB_TOKEN`` environment variable.
 It can also be passed via the ``--github-access-token`` option.
 
+Any dependencies required by a template's pre/post-generate hooks must be installed into the same environment
+as the template updater.
+
 Find out more by running::
 
     update-template --help
